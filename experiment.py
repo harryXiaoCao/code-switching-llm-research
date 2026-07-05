@@ -7,7 +7,7 @@ import urllib.request
 
 # API keys
 deepseek_api_key = os.environ.get("DEEPSEEK_API_KEY")
-kimi_api_key = os.environ.get("KIMI_API_KEY")
+qwen_api_key = os.environ.get("QWEN_API_KEY")
 gemini_api_key = os.environ.get("GEMINI_API_KEY")
 openai_api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -16,14 +16,14 @@ prompt_path = root_path / "data" / "expanded_dataset.jsonl"
 results_path = root_path / "results"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--provider", required=True, choices=("deepseek", "kimi", "gemini", "openai"))
+parser.add_argument("--provider", required=True, choices=("deepseek", "qwen", "gemini", "openai"))
 args = parser.parse_args()
 provider = args.provider
 result_file = results_path / f"{provider}_responses.jsonl"
 if provider == "deepseek":
     api_key = deepseek_api_key
-elif provider == "kimi":
-    api_key = kimi_api_key
+elif provider == "qwen":
+    api_key = qwen_api_key
 elif provider == "gemini":
     api_key = gemini_api_key
 elif provider == "openai":
@@ -45,21 +45,21 @@ for i in range(len(completed_results), len(prompts)):
                 payload = {
                     "model" : "deepseek-v4-flash",
                     "messages" : [{"role" : "user", "content" : prompt["prompt_text"]}],
-                    "max_tokens" : 800,
+                    "max_tokens" : 2048,
                     "temperature" : 0.0,
                     "stream" : False,
                     "thinking" : {"type": "disabled"}
                 }
-            elif provider == "kimi":
-                url = "https://api.moonshot.cn/v1/chat/completions"
+            elif provider == "qwen":
+                url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
                 headers["Authorization"] = f"Bearer {api_key}"
                 payload = {
-                    "model" : "kimi-k2.6",
+                    "model" : "qwen3.6-flash",
                     "messages" : [{"role" : "user", "content" : prompt["prompt_text"]}],
-                    "max_completion_tokens" : 800,
-                    "temperature" : 0.6,
+                    "max_tokens" : 2048,
+                    "temperature" : 0.0,
                     "stream" : False,
-                    "thinking" : {"type": "disabled"}
+                    "chat_template_kwargs" : {"enable_thinking" : False}
                 }
             elif provider == "gemini":
                 model_name = urllib.parse.quote("models/gemini-2.5-flash", safe="/")
@@ -70,7 +70,7 @@ for i in range(len(completed_results), len(prompts)):
                 payload = {
                     "contents" : [{"parts" : [{"text" : prompt["prompt_text"]}]}],
                     "generationConfig" : {
-                        "maxOutputTokens" : 800,
+                        "maxOutputTokens" : 2048,
                         "temperature" : 0.0,
                         "thinkingConfig" : {
                             "thinkingBudget" : 0,
@@ -84,7 +84,7 @@ for i in range(len(completed_results), len(prompts)):
                 payload = {
                     "model": "gpt-5.4-mini",
                     "input": prompt["prompt_text"],
-                    "max_output_tokens": 800,
+                    "max_output_tokens": 2048,
                     "temperature": 0.0,
                     "reasoning": {"effort": "none"}
                 }
@@ -98,7 +98,7 @@ for i in range(len(completed_results), len(prompts)):
             with urllib.request.urlopen(request, timeout=90) as api_response:
                 data = json.loads(api_response.read().decode("utf-8"))
 
-            if provider == "deepseek" or provider == "kimi":
+            if provider == "deepseek" or provider == "qwen":
                 response_text = data["choices"][0]["message"]["content"].strip()
                 token_count = data["usage"]["completion_tokens"]
             elif provider == "gemini":
